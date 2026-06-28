@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>1日プランナー</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="toolbar">
+    <h1>1日プランナー</h1>
+    <div class="range-form">
+      <label>開始 <input type="time" id="dayStart" value="10:00" step="600"></label>
+      <label>終了 <input type="time" id="dayEnd" value="19:00" step="600"></label>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="pool-panel">
+      <h2>タスク</h2>
+      <form id="taskForm" class="task-form">
+        <input type="text" id="taskTitle" placeholder="タスク名" required>
+        <input type="number" id="taskDuration" placeholder="分" min="10" step="10" value="30" required>
+        <input type="color" id="taskColor" value="#4a90d9">
+        <button type="submit">追加</button>
+      </form>
+      <div id="pool" class="pool" data-zone="pool"></div>
+    </section>
+
+    <section class="timeline-panel">
+      <h2>タイムライン</h2>
+      <div id="timelineWrapper" class="timeline-wrapper">
+        <div id="timeline" class="timeline" data-zone="timeline"></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="editDialog" class="edit-dialog hidden">
+    <form id="editForm">
+      <input type="text" id="editTitle">
+      <input type="number" id="editDuration" min="10" step="10">
+      <input type="color" id="editColor">
+      <div class="edit-actions">
+        <button type="submit">保存</button>
+        <button type="button" id="editDelete">削除</button>
+        <button type="button" id="editCancel">閉じる</button>
+      </div>
+    </form>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
