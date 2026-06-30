@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>月末締めチェック</title>
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="app-header">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">月</div>
+          <div>
+            <h1>月末締めチェック</h1>
+            <p id="monthLabel">対象月を読み込み中</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <label class="month-field">
+            <span>対象月</span>
+            <input id="monthInput" type="month" />
+          </label>
+          <button id="backupBtn" class="secondary-button" type="button">バックアップ</button>
+          <label class="secondary-button file-button" for="restoreInput">リストア</label>
+          <input id="restoreInput" class="sr-only" type="file" accept="text/csv,.csv" />
+        </div>
+      </header>
+
+      <main>
+        <nav class="tabs" aria-label="画面切替">
+          <button class="tab is-active" type="button" data-view="check">締めチェック</button>
+          <button class="tab" type="button" data-view="assignments">割り当て</button>
+          <button class="tab" type="button" data-view="members">メンバー</button>
+          <button class="tab" type="button" data-view="tasks">タスク</button>
+        </nav>
+
+        <div id="statusMessage" class="status-message" role="status" aria-live="polite"></div>
+
+        <section id="checkView" class="view is-active">
+          <div id="checkList" class="check-matrix-wrap"></div>
+        </section>
+
+        <section id="assignmentsView" class="view" aria-labelledby="assignmentsHeading">
+          <div class="view-heading">
+            <div>
+              <h2 id="assignmentsHeading">割り当て</h2>
+              <p>メンバーごとの対象タスク</p>
+            </div>
+          </div>
+          <div id="assignmentMatrix" class="matrix-wrap"></div>
+        </section>
+
+        <section id="membersView" class="view" aria-labelledby="membersHeading">
+          <div class="view-heading">
+            <div>
+              <h2 id="membersHeading">メンバー</h2>
+              <p>チェック対象者のマスタ</p>
+            </div>
+          </div>
+          <form id="memberForm" class="inline-form" autocomplete="off">
+            <label>
+              <span>氏名</span>
+              <input id="memberNameInput" name="name" type="text" required maxlength="40" />
+            </label>
+            <button class="primary-button" type="submit">追加</button>
+          </form>
+          <div id="membersTable" class="table-wrap"></div>
+        </section>
+
+        <section id="tasksView" class="view" aria-labelledby="tasksHeading">
+          <div class="view-heading">
+            <div>
+              <h2 id="tasksHeading">タスク</h2>
+              <p>月末締めで確認する項目</p>
+            </div>
+          </div>
+          <form id="taskForm" class="inline-form" autocomplete="off">
+            <label>
+              <span>タスク名</span>
+              <input id="taskNameInput" name="name" type="text" required maxlength="50" />
+            </label>
+            <button class="primary-button" type="submit">追加</button>
+          </form>
+          <div id="tasksTable" class="table-wrap"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="./app.js" defer></script>
+  </body>
+</html>
