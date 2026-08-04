@@ -323,6 +323,33 @@ main {
   overflow-wrap: anywhere;
 }
 
+.group-row td {
+  padding: 8px 12px;
+}
+
+.group-row-cell {
+  position: sticky;
+  left: 0;
+  background: var(--surface-strong);
+  border-bottom: 1px solid var(--line);
+}
+
+.check-matrix-table .group-row-cell {
+  text-align: left;
+}
+
+.group-row-name {
+  font-weight: 800;
+  color: var(--accent-strong);
+}
+
+.group-row-count {
+  margin-left: 10px;
+  min-width: auto;
+  height: 22px;
+  font-size: 12px;
+}
+
 .empty-state {
   padding: 22px 16px;
   border: 1px dashed var(--line);
@@ -398,6 +425,31 @@ tbody tr:last-child td {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
+}
+
+.inline-form-3 {
+  grid-template-columns: minmax(200px, 1fr) minmax(150px, 220px) auto;
+}
+
+.inline-form select {
+  height: 40px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--ink);
+  padding: 0 11px;
+  outline: none;
+}
+
+.inline-form select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(31, 122, 104, 0.14);
+}
+
+select.editable-input {
+  width: 100%;
+  height: 40px;
+  background: #fff;
 }
 
 .editable-input {

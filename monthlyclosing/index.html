@@ -33,6 +33,7 @@
           <button class="tab is-active" type="button" data-view="check">締めチェック</button>
           <button class="tab" type="button" data-view="assignments">割り当て</button>
           <button class="tab" type="button" data-view="members">メンバー</button>
+          <button class="tab" type="button" data-view="groups">グループ</button>
           <button class="tab" type="button" data-view="tasks">タスク</button>
         </nav>
 
@@ -59,14 +60,35 @@
               <p>チェック対象者のマスタ</p>
             </div>
           </div>
-          <form id="memberForm" class="inline-form" autocomplete="off">
+          <form id="memberForm" class="inline-form inline-form-3" autocomplete="off">
             <label>
               <span>氏名</span>
               <input id="memberNameInput" name="name" type="text" required maxlength="40" />
             </label>
+            <label>
+              <span>グループ</span>
+              <select id="memberGroupInput" name="groupId"></select>
+            </label>
             <button class="primary-button" type="submit">追加</button>
           </form>
           <div id="membersTable" class="table-wrap"></div>
+        </section>
+
+        <section id="groupsView" class="view" aria-labelledby="groupsHeading">
+          <div class="view-heading">
+            <div>
+              <h2 id="groupsHeading">グループ</h2>
+              <p>メンバーをまとめる区分</p>
+            </div>
+          </div>
+          <form id="groupForm" class="inline-form" autocomplete="off">
+            <label>
+              <span>グループ名</span>
+              <input id="groupNameInput" name="name" type="text" required maxlength="40" />
+            </label>
+            <button class="primary-button" type="submit">追加</button>
+          </form>
+          <div id="groupsTable" class="table-wrap"></div>
         </section>
 
         <section id="tasksView" class="view" aria-labelledby="tasksHeading">

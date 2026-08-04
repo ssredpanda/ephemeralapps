@@ -2,10 +2,14 @@ const STORAGE_KEY = "monthlyclosing:v1";
 
 const defaultState = {
   currentMonth: getCurrentMonth(),
+  groups: [
+    { id: "g-sales", name: "営業部" },
+    { id: "g-dev", name: "開発部" },
+  ],
   members: [
-    { id: "m-yamada", name: "山田 太郎" },
-    { id: "m-sato", name: "佐藤 花子" },
-    { id: "m-suzuki", name: "鈴木 一郎" },
+    { id: "m-yamada", name: "山田 太郎", groupId: "g-sales" },
+    { id: "m-sato", name: "佐藤 花子", groupId: "g-sales" },
+    { id: "m-suzuki", name: "鈴木 一郎", groupId: "g-dev" },
   ],
   tasks: [
     { id: "t-expense", name: "経費申請" },
@@ -43,7 +47,11 @@ function bindElements() {
     "assignmentMatrix",
     "memberForm",
     "memberNameInput",
+    "memberGroupInput",
     "membersTable",
+    "groupForm",
+    "groupNameInput",
+    "groupsTable",
     "taskForm",
     "taskNameInput",
     "tasksTable",
@@ -66,6 +74,7 @@ function bindEvents() {
   });
 
   elements.memberForm.addEventListener("submit", addMember);
+  elements.groupForm.addEventListener("submit", addGroup);
   elements.taskForm.addEventListener("submit", addTask);
   elements.backupBtn.addEventListener("click", backupData);
   elements.restoreInput.addEventListener("change", restoreData);
@@ -83,8 +92,14 @@ function loadState() {
 function normalizeState(value, fallback = defaultState) {
   const next = value && typeof value === "object" ? structuredClone(value) : structuredClone(fallback);
   next.currentMonth = /^\d{4}-\d{2}$/.test(next.currentMonth || "") ? next.currentMonth : getCurrentMonth();
+  next.groups = Array.isArray(next.groups)
+    ? next.groups.filter((item) => item && item.id && item.name).map((item) => ({ id: item.id, name: item.name }))
+    : [];
+  const groupIds = new Set(next.groups.map((group) => group.id));
   next.members = Array.isArray(next.members)
-    ? next.members.filter((item) => item && item.id && item.name).map((item) => ({ id: item.id, name: item.name }))
+    ? next.members
+        .filter((item) => item && item.id && item.name)
+        .map((item) => ({ id: item.id, name: item.name, groupId: groupIds.has(item.groupId) ? item.groupId : "" }))
     : [];
   next.tasks = Array.isArray(next.tasks)
     ? next.tasks.filter((item) => item && item.id && item.name).map((item) => ({ id: item.id, name: item.name }))
@@ -176,7 +191,22 @@ function renderAll() {
   renderCheckView();
   renderAssignmentsView();
   renderMembersView();
+  renderGroupsView();
   renderTasksView();
+}
+
+function getGroupedMembers() {
+  const grouped = [];
+  for (const group of state.groups) {
+    const members = state.members.filter((member) => member.groupId === group.id);
+    grouped.push({ group, members });
+  }
+  const groupIds = new Set(state.groups.map((group) => group.id));
+  const ungrouped = state.members.filter((member) => !groupIds.has(member.groupId));
+  if (ungrouped.length) {
+    grouped.push({ group: null, members: ungrouped });
+  }
+  return grouped;
 }
 
 function renderCheckView() {
@@ -185,27 +215,31 @@ function renderCheckView() {
     return;
   }
 
-  const rows = [];
-
-  for (const member of state.members) {
-    const summary = getMemberCheckSummary(member.id);
-    rows.push({ member, summary });
-  }
-
-  if (!rows.length) {
-    elements.checkList.replaceChildren(createEmptyState("表示できるメンバーがありません。"));
-    return;
-  }
-
+  const grouped = getGroupedMembers();
+  const colspan = 2 + state.tasks.length;
   const table = createEl("table", "check-matrix-table");
   table.append(createCheckMatrixHead(state.tasks));
   const tbody = document.createElement("tbody");
-  for (const row of rows) {
-    tbody.append(createCheckMatrixRow(row.member, row.summary, state.tasks));
+  for (const { group, members } of grouped) {
+    if (!members.length) continue;
+    tbody.append(createGroupHeaderRow(group, members.length, colspan));
+    for (const member of members) {
+      tbody.append(createCheckMatrixRow(member, getMemberCheckSummary(member.id), state.tasks));
+    }
   }
   table.append(tbody);
 
   elements.checkList.replaceChildren(table);
+}
+
+function createGroupHeaderRow(group, count, colspan) {
+  const row = createEl("tr", "group-row");
+  const cell = createEl("td", "group-row-cell");
+  cell.colSpan = colspan;
+  cell.append(createEl("span", "group-row-name", group ? group.name : "未分類"));
+  cell.append(createEl("span", "count-badge group-row-count", `${count}名`));
+  row.append(cell);
+  return row;
 }
 
 function createCheckMatrixHead(tasks) {
@@ -275,33 +309,36 @@ function renderAssignmentsView() {
     th.append(createEl("div", "task-name", task.name));
     headerRow.append(th);
   }
-  headerRow.append(createEl("th", "", "件数"));
   thead.append(headerRow);
 
+  const colspan = 1 + state.tasks.length;
   const tbody = document.createElement("tbody");
-  for (const member of state.members) {
-    const tr = document.createElement("tr");
-    const memberCell = createEl("td");
-    memberCell.append(createEl("div", "task-name", member.name));
-    tr.append(memberCell);
+  for (const { group, members } of getGroupedMembers()) {
+    if (!members.length) continue;
+    tbody.append(createGroupHeaderRow(group, members.length, colspan));
+    for (const member of members) {
+      const tr = document.createElement("tr");
+      const memberCell = createEl("td");
+      memberCell.append(createEl("div", "task-name", member.name));
+      tr.append(memberCell);
 
-    for (const task of state.tasks) {
-      const td = createEl("td", "matrix-cell");
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      checkbox.className = "matrix-checkbox";
-      checkbox.checked = getAssignedTaskIds(member.id).includes(task.id);
-      checkbox.setAttribute("aria-label", `${member.name} に ${task.name} を割り当て`);
-      checkbox.addEventListener("change", () => {
-        setAssignment(member.id, task.id, checkbox.checked);
-        saveAndRender(`${member.name} の割り当てを更新しました。`);
-      });
-      td.append(checkbox);
-      tr.append(td);
+      for (const task of state.tasks) {
+        const td = createEl("td", "matrix-cell");
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.className = "matrix-checkbox";
+        checkbox.checked = getAssignedTaskIds(member.id).includes(task.id);
+        checkbox.setAttribute("aria-label", `${member.name} に ${task.name} を割り当て`);
+        checkbox.addEventListener("change", () => {
+          setAssignment(member.id, task.id, checkbox.checked);
+          saveAndRender(`${member.name} の割り当てを更新しました。`);
+        });
+        td.append(checkbox);
+        tr.append(td);
+      }
+
+      tbody.append(tr);
     }
-
-    tr.append(createEl("td", "", String(getAssignedTaskIds(member.id).length)));
-    tbody.append(tr);
   }
 
   table.append(thead, tbody);
@@ -315,12 +352,13 @@ function renderMembersView() {
   }
 
   const table = createEl("table");
-  table.append(createTableHead(["氏名", "割り当て", "操作"]));
+  table.append(createTableHead(["氏名", "グループ", "割り当て", "操作"]));
   const tbody = document.createElement("tbody");
 
   for (const member of state.members) {
     const tr = document.createElement("tr");
     tr.append(createEditableCell(member.name, "氏名", (value) => updateMember(member.id, { name: value })));
+    tr.append(createGroupSelectCell(member));
     const countCell = createEl("td");
     countCell.append(createEl("span", "count-badge", String(getAssignedTaskIds(member.id).length)));
     tr.append(countCell);
@@ -330,6 +368,58 @@ function renderMembersView() {
 
   table.append(tbody);
   elements.membersTable.replaceChildren(table);
+}
+
+function createGroupSelectCell(member) {
+  const td = createEl("td");
+  const select = document.createElement("select");
+  select.className = "editable-input";
+  fillGroupOptions(select, member.groupId);
+  select.addEventListener("change", () => setMemberGroup(member.id, select.value));
+  td.append(select);
+  return td;
+}
+
+function fillGroupOptions(select, selectedId) {
+  select.replaceChildren();
+  const none = document.createElement("option");
+  none.value = "";
+  none.textContent = "未分類";
+  select.append(none);
+  for (const group of state.groups) {
+    const option = document.createElement("option");
+    option.value = group.id;
+    option.textContent = group.name;
+    select.append(option);
+  }
+  select.value = state.groups.some((group) => group.id === selectedId) ? selectedId : "";
+}
+
+function renderGroupsView() {
+  fillGroupOptions(elements.memberGroupInput, elements.memberGroupInput.value);
+
+  if (!state.groups.length) {
+    elements.groupsTable.replaceChildren(createEmptyState("グループが未登録です。"));
+    return;
+  }
+
+  const table = createEl("table");
+  table.append(createTableHead(["グループ名", "メンバー数", "操作"]));
+  const tbody = document.createElement("tbody");
+
+  for (const group of state.groups) {
+    const tr = document.createElement("tr");
+    tr.append(createEditableCell(group.name, "グループ名", (value) => updateGroup(group.id, { name: value })));
+    const memberCount = state.members.filter((member) => member.groupId === group.id).length;
+    const countCell = createEl("td");
+    countCell.append(createEl("span", "count-badge", String(memberCount)));
+    tr.append(countCell);
+    tr.append(createActionCell(() => deleteGroup(group.id)));
+    tbody.append(tr);
+  }
+
+  table.append(tbody);
+  elements.groupsTable.replaceChildren(table);
 }
 
 function renderTasksView() {
@@ -394,11 +484,52 @@ function addMember(event) {
   const name = elements.memberNameInput.value.trim();
   if (!name) return;
 
-  const member = { id: createId("m"), name };
+  const groupId = elements.memberGroupInput.value;
+  const member = { id: createId("m"), name, groupId: state.groups.some((group) => group.id === groupId) ? groupId : "" };
   state.members.push(member);
   state.assignments[member.id] = [];
   elements.memberForm.reset();
   saveAndRender(`${name} を追加しました。`);
+}
+
+function addGroup(event) {
+  event.preventDefault();
+  const name = elements.groupNameInput.value.trim();
+  if (!name) return;
+
+  state.groups.push({ id: createId("g"), name });
+  elements.groupForm.reset();
+  saveAndRender(`${name} を追加しました。`);
+}
+
+function updateGroup(groupId, values) {
+  const group = state.groups.find((item) => item.id === groupId);
+  if (!group) return;
+  if ("name" in values && !values.name) {
+    renderGroupsView();
+    return;
+  }
+  Object.assign(group, values);
+  saveAndRender("グループを更新しました。");
+}
+
+function deleteGroup(groupId) {
+  const group = state.groups.find((item) => item.id === groupId);
+  if (!group) return;
+  if (!window.confirm(`${group.name} を削除しますか？（所属メンバーは未分類になります）`)) return;
+
+  state.groups = state.groups.filter((item) => item.id !== groupId);
+  for (const member of state.members) {
+    if (member.groupId === groupId) member.groupId = "";
+  }
+  saveAndRender(`${group.name} を削除しました。`);
+}
+
+function setMemberGroup(memberId, groupId) {
+  const member = state.members.find((item) => item.id === memberId);
+  if (!member) return;
+  member.groupId = state.groups.some((group) => group.id === groupId) ? groupId : "";
+  saveAndRender("メンバーのグループを更新しました。");
 }
 
 function addTask(event) {
@@ -497,21 +628,25 @@ function restoreData(event) {
 }
 
 function createBackupCsv(source) {
-  const rows = [["type", "current_month", "member_id", "member_name", "task_id", "task_name", "month", "checked", "checked_at"]];
-  rows.push(["meta", source.currentMonth, "", "", "", "", "", "", ""]);
+  const rows = [["type", "current_month", "member_id", "member_name", "task_id", "task_name", "month", "checked", "checked_at", "group_id", "group_name"]];
+  rows.push(["meta", source.currentMonth, "", "", "", "", "", "", "", "", ""]);
+
+  for (const group of source.groups) {
+    rows.push(["group", "", "", "", "", "", "", "", "", group.id, group.name]);
+  }
 
   for (const member of source.members) {
-    rows.push(["member", "", member.id, member.name, "", "", "", "", ""]);
+    rows.push(["member", "", member.id, member.name, "", "", "", "", "", member.groupId || "", ""]);
   }
 
   for (const task of source.tasks) {
-    rows.push(["task", "", "", "", task.id, task.name, "", "", ""]);
+    rows.push(["task", "", "", "", task.id, task.name, "", "", "", "", ""]);
   }
 
   for (const member of source.members) {
     const assignedTaskIds = Array.isArray(source.assignments[member.id]) ? source.assignments[member.id] : [];
     for (const taskId of assignedTaskIds) {
-      rows.push(["assignment", "", member.id, "", taskId, "", "", "", ""]);
+      rows.push(["assignment", "", member.id, "", taskId, "", "", "", "", "", ""]);
     }
   }
 
@@ -520,7 +655,7 @@ function createBackupCsv(source) {
       for (const taskId of Object.keys(source.records[month][memberId]).sort()) {
         const record = source.records[month][memberId][taskId];
         if (record?.checked) {
-          rows.push(["record", "", memberId, "", taskId, "", month, "1", record.checkedAt || ""]);
+          rows.push(["record", "", memberId, "", taskId, "", month, "1", record.checkedAt || "", "", ""]);
         }
       }
     }
@@ -538,24 +673,32 @@ function parseBackupCsv(text) {
 
   const restored = {
     currentMonth: getCurrentMonth(),
+    groups: [],
     members: [],
     tasks: [],
     assignments: {},
     records: {},
   };
+  const groupIds = new Set();
   const memberIds = new Set();
   const taskIds = new Set();
 
   for (const row of rows) {
-    const [type, currentMonth, memberId, memberName, taskId, taskName, month, checked, checkedAt] = row;
+    const [type, currentMonth, memberId, memberName, taskId, taskName, month, checked, checkedAt, groupId, groupName] = row;
 
     if (type === "meta" && /^\d{4}-\d{2}$/.test(currentMonth || "")) {
       restored.currentMonth = currentMonth;
       continue;
     }
 
+    if (type === "group" && groupId && groupName && !groupIds.has(groupId)) {
+      restored.groups.push({ id: groupId, name: groupName });
+      groupIds.add(groupId);
+      continue;
+    }
+
     if (type === "member" && memberId && memberName && !memberIds.has(memberId)) {
-      restored.members.push({ id: memberId, name: memberName });
+      restored.members.push({ id: memberId, name: memberName, groupId: groupId || "" });
       restored.assignments[memberId] = restored.assignments[memberId] || [];
       memberIds.add(memberId);
       continue;
