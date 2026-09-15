@@ -1,10 +1,10 @@
-name: Deploy menu1 to GitHub Pages
+name: Deploy menu sites to GitHub Pages
 
 on:
   push:
     branches: [main]
     paths:
-      - menu1/**
+      - "menu*/**"
       - .github/workflows/pages.yml
   workflow_dispatch:
 
@@ -26,10 +26,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
-      - name: Stage menu1 under /menu1/
+      - name: Stage each menuN site under its own /menuN/ path
         run: |
-          mkdir -p _site/menu1
-          cp -r menu1/. _site/menu1/
+          mkdir -p _site
+          for dir in menu*/; do
+            name="${dir%/}"
+            mkdir -p "_site/$name"
+            cp -r "$dir." "_site/$name/"
+          done
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
